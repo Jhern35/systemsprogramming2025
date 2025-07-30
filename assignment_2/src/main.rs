@@ -24,9 +24,9 @@ fn module_1() {
 
 fn module_2() {
     fn most_frequent_word(text: &str) -> (String, usize) {
-        let words: Vec<String> = text.split_whitespace().collect();
+        let words: Vec<&str> = text.split_whitespace().collect();
         let mut max_count:usize = 0;
-        let mut max_word:&str = "";
+        let mut max_word = "";
 
         for word in &words {
             let mut curr:usize = 0;
