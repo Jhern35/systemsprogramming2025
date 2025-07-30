@@ -1,0 +1,11 @@
+ls + Cargo.lock
+Cargo.toml
+History.txt
+src
+target
+ +  @2025-07-30 04:44:16.659065994 +00:00ls Cargo.lock
+Cargo.toml
+History.txt
+src
+target
+  @2025-07-30 04:44:51.224966213 +00:00

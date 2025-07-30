@@ -4,6 +4,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
+use chrono::{Local};
 
 struct LinuxAgent {
     path: String,
@@ -11,36 +12,67 @@ struct LinuxAgent {
 
 impl LinuxAgent {
     fn new() -> LinuxAgent {
-        LinuxAgent {
-            path: "/opt/Jhern/LinuxAgent".to_string(),
-        }
+        OpenOptions::new().read(true)
+            .create(true).append(true).open("History.txt")
+            .expect("Error with file!");
 
-        let mut file = File:create("History.txt");
+        LinuxAgent {
+            path: "History.txt".to_string(),
+        }
     }
 
     fn executing_os_commands_linux(&self, command_full: &str) {
-       let output = { 
-        Command::new(self.path)
-            .args(command_full.parse())
-            .output()
-        };
+        let command: Vec<&str> = command_full.split_whitespace().collect();
+        if command.len() < 1 { println!("No command entered"); return; }
+        let output = { 
+            Command::new(&command[0])
+                .args(&command[1..command.len()])
+                .output()
+            };
+        match output {
+            Ok(result) => {
+                let stdout = match String::from_utf8(result.stdout) {
+                    Ok(s) => s,
+                    Err(e) => { println!("Error {}", e); return; }
+                };
+                
+                let stderr = match String::from_utf8(result.stderr) {
+                    Ok(s) => s,
+                    Err(e) => { println!("Error {}", e); return; }
+                };
 
-        save_results(output.to_string() + output.stdout.to_string());
+                self.save_results(format!("{} {} {}", command_full, stdout, stderr));
+            }
+            Err(e) => {
+                println!("Error {}!", e);
+            }
+        }
     }
 
     fn accept_linux_command_from_user() -> String {
-        // TODO: Implement user input
-        // Prompt the user for a Linux command and return it
+        print!("user-1: ~$ ");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).expect("Error reading line");
+        input.trim().to_string()
     }
 
     fn save_results(&self, content: String) {
-        // TODO: Implement saving results
-        // Append the command and its output to the file
+        let mut file = OpenOptions::new().append(true).open(&self.path).expect("Unable to open file!");
+        let time = Local::now().to_string();
+        let full_history = format!("{} @{}", content, time);
+        file.write_all(full_history.as_bytes());
     }
 
     fn show_results(&self) {
-        // TODO: Implement showing results
-        // Read and display the contents of the command history file
+        let file = File::open(&self.path).expect("Unable to open file!");
+        let buffer = BufReader::new(file);
+
+        for line in buffer.lines() {
+            match line{
+                Ok(s) => println!("{}", s),
+                Err(e) => println!("Error with printing line {}", e),
+            };
+        }
     }
 }
 
@@ -50,4 +82,8 @@ fn main() {
     // 2. Enter a loop to accept and execute commands
     // 3. Break the loop when the user wants to stop
     // 4. Show the results
+    let user = LinuxAgent::new();
+    let inp = LinuxAgent::accept_linux_command_from_user();
+    user.executing_os_commands_linux(&inp);
+    user.show_results();
 }
