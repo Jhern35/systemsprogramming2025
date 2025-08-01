@@ -23,34 +23,26 @@ impl LinuxAgent {
 
     fn executing_os_commands_linux(&self, command_full: &str) {
         let command: Vec<&str> = command_full.split_whitespace().collect();
-        if command.len() < 1 { println!("No command entered"); return; }
-        let output = { 
-            Command::new(&command[0])
-                .args(&command[1..command.len()])
-                .output()
-            };
-        match output {
-            Ok(result) => {
-                let stdout = match String::from_utf8(result.stdout) {
-                    Ok(s) => s,
-                    Err(e) => { println!("Error {}", e); return; }
-                };
-                
-                let stderr = match String::from_utf8(result.stderr) {
-                    Ok(s) => s,
-                    Err(e) => { println!("Error {}", e); return; }
-                };
-
-                self.save_results(format!("{} {} {}", command_full, stdout, stderr));
+        if command.len() < 1 { println!("No command entered"); return; } 
+        let time = Local::now().to_string();
+        match Command::new(&command[0]).args(&command[1..command.len()]).output() {
+            Ok(output) => {
+                let std = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+                let full_history = format!("{}: {} - {} {}\n", time, command_full, std, 
+                stderr);
+                self.save_results(full_history);
             }
             Err(e) => {
-                println!("Error {}!", e);
+                println!("Inavlid command: {}", e);
             }
         }
+
     }
 
     fn accept_linux_command_from_user() -> String {
         print!("user-1: ~$ ");
+        io::stdout().flush().unwrap();
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("Error reading line");
         input.trim().to_string()
@@ -58,9 +50,7 @@ impl LinuxAgent {
 
     fn save_results(&self, content: String) {
         let mut file = OpenOptions::new().append(true).open(&self.path).expect("Unable to open file!");
-        let time = Local::now().to_string();
-        let full_history = format!("{} @{}", content, time);
-        file.write_all(full_history.as_bytes());
+        _= file.write_all(content.as_bytes());
     }
 
     fn show_results(&self) {
@@ -77,13 +67,12 @@ impl LinuxAgent {
 }
 
 fn main() {
-    // TODO: Implement the main program loop
-    // 1. Create a LinuxAgent instance
-    // 2. Enter a loop to accept and execute commands
-    // 3. Break the loop when the user wants to stop
-    // 4. Show the results
     let user = LinuxAgent::new();
-    let inp = LinuxAgent::accept_linux_command_from_user();
-    user.executing_os_commands_linux(&inp);
+    loop {
+        let inp = LinuxAgent::accept_linux_command_from_user();
+        io::stdout().flush().unwrap();
+        if inp == "exit".to_string() { break; }
+        user.executing_os_commands_linux(&inp);
+    }
     user.show_results();
 }
