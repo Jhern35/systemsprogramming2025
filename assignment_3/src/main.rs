@@ -1,78 +1,51 @@
-use std::process::Command;
-use std::io;
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
-use chrono::{Local};
+use std::io::{Write, BufReader, BufRead};
 
-struct LinuxAgent {
-    path: String,
+struct Book {
+    title: String,
+    author: String,
+    year: u16,
 }
 
-impl LinuxAgent {
-    fn new() -> LinuxAgent {
-        OpenOptions::new().read(true)
-            .create(true).append(true).open("History.txt")
-            .expect("Error with file!");
+fn save_books(books: &Vec<Book>, filename: &str) {
+   let mut file = File::create(filename).unwrap();
+   for book in books {
+    write!(file, "{}; {}; {};\n", book.title, book.author, book.year).unwrap();
+   }
+}
 
-        LinuxAgent {
-            path: "History.txt".to_string(),
-        }
-    }
+fn load_books(filename: &str) -> Vec<Book> {
+    let file = File::open(filename).unwrap();
+    let mut loaded_books:Vec<Book> = vec![];
+    let reader = BufReader::new(file);
 
-    fn executing_os_commands_linux(&self, command_full: &str) {
-        let command: Vec<&str> = command_full.split_whitespace().collect();
-        if command.len() < 1 { println!("No command entered"); return; } 
-        let time = Local::now().to_string();
-        match Command::new(&command[0]).args(&command[1..command.len()]).output() {
-            Ok(output) => {
-                let std = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-                let full_history = format!("{}: {} - {} {}\n", time, command_full, std, 
-                stderr);
-                self.save_results(full_history);
-            }
-            Err(e) => {
-                println!("Inavlid command: {}", e);
-            }
-        }
+    for line in reader.lines() {
+        let line = line.unwrap();
+        let tmp: Vec<&str> = line.split(";").collect();
+        let num = tmp[2].trim().parse::<u16>();
 
-    }
-
-    fn accept_linux_command_from_user() -> String {
-        print!("user-1: ~$ ");
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Error reading line");
-        input.trim().to_string()
-    }
-
-    fn save_results(&self, content: String) {
-        let mut file = OpenOptions::new().append(true).open(&self.path).expect("Unable to open file!");
-        _= file.write_all(content.as_bytes());
-    }
-
-    fn show_results(&self) {
-        let file = File::open(&self.path).expect("Unable to open file!");
-        let buffer = BufReader::new(file);
-
-        for line in buffer.lines() {
-            match line{
-                Ok(s) => println!("{}", s),
-                Err(e) => println!("Error with printing line {}", e),
-            };
-        }
-    }
+        let book = Book {
+            title: tmp[0].trim().to_string(),
+            author: tmp[1].trim().to_string(),
+            year: num.unwrap(),
+        };
+        loaded_books.push(book);
+    };
+    loaded_books
 }
 
 fn main() {
-    let user = LinuxAgent::new();
-    loop {
-        let inp = LinuxAgent::accept_linux_command_from_user();
-        io::stdout().flush().unwrap();
-        if inp == "exit".to_string() { break; }
-        user.executing_os_commands_linux(&inp);
+    let books = vec![
+        Book { title: "1984".to_string(), author: "George Orwell".to_string(), year: 1949 },
+        Book { title: "To Kill a Mockingbird".to_string(), author: "Harper Lee".to_string(), year: 1960 },
+    ];
+
+    save_books(&books, "books.txt");
+    println!("Books saved to file.");
+
+    let loaded_books = load_books("books.txt");
+    println!("Loaded books:");
+    for book in loaded_books {
+        println!("{} by {}, published in {}", book.title, book.author, book.year);
     }
-    user.show_results();
 }
