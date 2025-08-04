@@ -80,7 +80,7 @@ fn module_3() {
         else { return -1; }
     }
 
-    let mut secret:i32 = 110;
+    let secret:i32 = 110;
     let mut guess:i32 = 100;
     let mut counter:i32 = 0;
 
