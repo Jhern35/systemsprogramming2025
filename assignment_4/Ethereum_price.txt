@@ -36,3 +36,6 @@ Ethereum current price: 4591.31
 Ethereum current price: 4591.31
 Ethereum current price: 4591.31
 Ethereum current price: 4591.31
+Ethereum current price: 4595.527
+Ethereum current price: 4595.527
+Ethereum current price: 4595.527

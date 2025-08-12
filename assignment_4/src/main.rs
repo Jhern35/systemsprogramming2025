@@ -80,6 +80,7 @@ impl Pricing for Bitcoin {
             writeln!(file, "Unable to retrieve price of Bitcoin").ok();
         }
         else {
+            println!("Bitcoin current price: {}", price);
             writeln!(file, "Bitcoin current price: {}", price).ok();
         }
     }
@@ -138,6 +139,7 @@ impl Pricing for Ethereum {
             writeln!(file, "Unable to retrieve price of Ethereum").ok();
         }
         else {
+            println!("Ethereum current price: {}", price);
             writeln!(file, "Ethereum current price: {}", price).ok();
         }
     }
@@ -195,6 +197,7 @@ impl Pricing for SP500 {
             writeln!(file, "Unable to retrieve price of S&P 500").ok();
         }
         else {
+            println!("S&P 500 current price: {}", price);
             writeln!(file, "S&P 500 current price: {}", price).ok();
         }
     }
