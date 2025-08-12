@@ -28,14 +28,24 @@ struct Price {
     regularMarketPrice: f64,
 }
 
-#[derive(Debug)]
 struct Bitcoin {
     file_path: String,
 }
 
+impl Bitcoin {
+    fn new() -> Self {
+       let file_path = "Bitcoin_price.txt".to_string();
+       OpenOptions::new().create(true).append(true).open("Bitcoin_price.txt".to_string()).expect("Unable to create file");
+
+       Self {
+        file_path,
+       }
+
+    }
+}
+
 impl Pricing for Bitcoin {  
     fn fetch_price(&self) -> f64 {
-        //Makes a HTTP request to the given webiste
         let url = "https://query2.finance.yahoo.com/v8/finance/chart/BTC-USD";
 
         let resp = match ureq::get(url).call() {
@@ -46,7 +56,6 @@ impl Pricing for Bitcoin {
             }
         };
 
-        //It reads the file and returns a variable and returns it.
         let price: Chart = match resp.into_json() {
             Ok(btc) => btc,
             Err(e) => {
@@ -65,8 +74,7 @@ impl Pricing for Bitcoin {
     }
 
     fn save_to_file(&self, price: f64) {
-        //Creating a file to store all incoming prices and panicking if file can't be created or it fails to write to it
-        //Save price to file while handling for errors
+        
         let mut file = OpenOptions::new().append(true).open(&self.file_path).expect("Error opening file!");
         if price == -1.0 {
             writeln!(file, "Unable to retrieve price of Bitcoin").ok();
@@ -77,10 +85,15 @@ impl Pricing for Bitcoin {
     }
 }
 
-impl Bitcoin {
+
+struct Ethereum {
+    file_path: String,
+}
+
+impl Ethereum {
     fn new() -> Self {
-       let file_path = "Bitcoin_price.txt".to_string();
-       OpenOptions::new().create(true).append(true).open("Bitcoin_price.txt".to_string()).expect("Unable to create file");
+       let file_path = "Ethereum_price.txt".to_string();
+       OpenOptions::new().create(true).append(true).open("Ethereum_price.txt".to_string()).expect("Unable to create file");
 
        Self {
         file_path,
@@ -89,41 +102,110 @@ impl Bitcoin {
     }
 }
 
-// struct Ethereum {
-//     price:f64,
-// }
+impl Pricing for Ethereum {
+    fn fetch_price(&self) -> f64 {
+            let url = "https://query2.finance.yahoo.com/v8/finance/chart/ETH-USD";
 
-// impl Pricing for Ethereum {
-//     fn fetch_price(&self, url: String) -> f64 {
-//         //Get the price and return it (error handling is important here)
-//     }
+            let resp = match ureq::get(url).call() {
+                Ok(response) => response,
+                Err(e) => { 
+                    println!("Error with retrieving price: {}", e);
+                    return -1.0;
+                }
+            };
 
-//     fn save_to_file(&self, url: String, price: f64) {
-//         //Save price to file
-//         //Possible format to save:
-//         //"self.id current price: price"
-//     }
-// }
+            let price: Chart = match resp.into_json() {
+                Ok(eth) => eth,
+                Err(e) => {
+                    println!("Error with retrieving price: {}", e);
+                    return -1.0;
+                }
+            };
+            
+            if let Some(eth) = price.chart.result.first() {
+                eth.meta.regularMarketPrice
+            }
+            else {
+                -1.0
+            }
 
-// struct SP500 {
-//     price:f64,
-// }
+    }
 
-// impl Pricing for SP500 {
-//     fn fetch_price(&self, url: String) -> f64 {
-//         //Get the price and return it (error handling is important here)
-//     }
+    fn save_to_file(&self, price: f64) {
+        
+        let mut file = OpenOptions::new().append(true).open(&self.file_path).expect("Error opening file!");
+        if price == -1.0 {
+            writeln!(file, "Unable to retrieve price of Ethereum").ok();
+        }
+        else {
+            writeln!(file, "Ethereum current price: {}", price).ok();
+        }
+    }
+}
 
-//     fn save_to_file(&self, url: String, price: f64) {
-//          //Save price to file
-//         //Possible format to save:
-//         //"self.id current price: price"
-//     }
-// }
+struct SP500 {
+    file_path: String,
+}
+
+impl SP500 {
+    fn new() -> Self {
+       let file_path = "SP500_price.txt".to_string();
+       OpenOptions::new().create(true).append(true).open("SP500_price.txt".to_string()).expect("Unable to create file");
+
+       Self {
+        file_path,
+       }
+
+    }
+}
+
+impl Pricing for SP500 {
+    fn fetch_price(&self) -> f64 {
+            let url = "https://query2.finance.yahoo.com/v8/finance/chart/%5EGSPC";
+
+            let resp = match ureq::get(url).call() {
+                Ok(response) => response,
+                Err(e) => { 
+                    println!("Error with retrieving price: {}", e);
+                    return -1.0;
+                }
+            };
+
+            let price: Chart = match resp.into_json() {
+                Ok(sp) => sp,
+                Err(e) => {
+                    println!("Error with retrieving price: {}", e);
+                    return -1.0;
+                }
+            };
+            
+            if let Some(sp) = price.chart.result.first() {
+                sp.meta.regularMarketPrice
+            }
+            else {
+                -1.0
+            }
+
+    }
+
+    fn save_to_file(&self, price: f64) {
+        
+        let mut file = OpenOptions::new().append(true).open(&self.file_path).expect("Error opening file!");
+        if price == -1.0 {
+            writeln!(file, "Unable to retrieve price of S&P 500").ok();
+        }
+        else {
+            writeln!(file, "S&P 500 current price: {}", price).ok();
+        }
+    }
+}
 
 fn main() {
     let btc = Bitcoin::new();
-    let price_checker:Vec<&dyn Pricing> = vec![&btc];
+    let eth = Ethereum::new();
+    let sp = SP500::new();
+
+    let price_checker:Vec<&dyn Pricing> = vec![&btc, &eth, &sp];
 
     loop {
 
