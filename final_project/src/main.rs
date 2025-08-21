@@ -1,9 +1,10 @@
+use std::io::{self, BufReader, BufRead, Write};
 use std::{thread, time::{Duration, Instant}};
-use chrono::{DateTime, Utc};
 use std::sync::{mpsc, Arc, Mutex};
-use ureq::Agent;
+use chrono::{DateTime, Utc};
 use std::fs::File;
-use std::io::{self, BufReader, BufRead};
+use ureq::Agent;
+
 
 #[derive(Debug)]
 struct WebsiteStatus {
@@ -13,10 +14,11 @@ struct WebsiteStatus {
     timestamp: DateTime<Utc>,
 }
 
-fn check_status(url: String, timeout: Duration, tries:u16) -> WebsiteStatus {
+fn check_website(url: String, timeout: Duration, tries:u16) -> WebsiteStatus {
     let start = Instant::now();
     let mut resp = None;
-    let agent: Agent = Agent::new();             
+    let agent: Agent = Agent::new();   
+    let time = Utc::now();          
 
     for attempt in 1..=tries {
         match agent.get(&url)
@@ -40,11 +42,13 @@ fn check_status(url: String, timeout: Duration, tries:u16) -> WebsiteStatus {
         url,
         status,
         response_time: end,
-        timestamp: Utc::now(),
+        timestamp: time,
     }
 }
 
 fn inputs() -> Duration {
+    print!("Enter max amount of time for program to call the website: ");
+    io::stdout().flush().unwrap();
     let mut input = String::new();
 
     if let Err(e) = io::stdin().read_line(&mut input) {
@@ -75,40 +79,40 @@ fn main() {
     }
 
     let timeout = inputs();
-    let num_workers = 10;
+    let num_workers = 50;
     let tries: u16 = 3;
 
-    let (tx, rx) = mpsc::channel::<String>();
-    let (result_tx, result_rx) = mpsc::channel::<WebsiteStatus>();
+    let (url_tx, url_rx) = mpsc::channel::<String>();
+    let (output_tx, output_rx) = mpsc::channel::<WebsiteStatus>();
 
-    let rx = Arc::new(Mutex::new(rx));
+    let url_rx = Arc::new(Mutex::new(url_rx));
 
     for _ in 0..num_workers {
-        let rx = Arc::clone(&rx);
-        let result_tx = result_tx.clone();
+        let url_rx = Arc::clone(&url_rx);
+        let output_tx = output_tx.clone();
         let timeout = timeout.clone();
         
         thread::spawn(move || {
             loop {
-                let url = match rx.lock().unwrap().recv() {
+                let url = match url_rx.lock().unwrap().recv() {
                     Ok(url) => url,
                     Err(_) => break, 
                 };
 
-                let status = check_status(url, timeout, tries);
-                result_tx.send(status).unwrap();
+                let status = check_website(url, timeout, tries);
+                output_tx.send(status).unwrap();
             }
         });
     }
 
-    drop(result_tx); 
+    drop(output_tx); 
 
     for url in urls {
-        tx.send(url).unwrap();
+        url_tx.send(url).unwrap();
     }
-    drop(tx); 
+    drop(url_tx); 
 
-    for res in result_rx {
+    for res in output_rx {
         println!("{:?}", res);
     }
     
